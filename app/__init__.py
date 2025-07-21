@@ -13,5 +13,7 @@ def create_app():
     from . import models
     from .routes import main_route
     app.register_blueprint(main_route)
+    # with app.app_context():
+    #     start_background_loader()
 
     return app
