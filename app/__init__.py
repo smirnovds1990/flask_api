@@ -1,8 +1,8 @@
 from flask import Flask
 
 
-from .config import Config
-from .db import db, migrate
+from app.db import db, migrate
+from config import Config
 
 
 def create_app():

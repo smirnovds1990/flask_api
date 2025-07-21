@@ -4,7 +4,7 @@ from decimal import Decimal
 from sqlalchemy import Boolean, DateTime, ForeignKey, func, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .db import db, products_categories, product_marks
+from app.db import db, products_categories, product_marks
 
 
 class Category(db.Model):
