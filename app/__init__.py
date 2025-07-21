@@ -16,7 +16,10 @@ def create_app():
     from .routes import main_route
     app.register_blueprint(main_route)
     with app.app_context():
-        task = threading.Thread(target=load_fetched_data_to_db, daemon=True)
-        task.start()
+        threading.Thread(
+            target=load_fetched_data_to_db,
+            args=(app,),
+            daemon=True,
+        ).start()
 
     return app

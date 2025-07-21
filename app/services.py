@@ -2,13 +2,13 @@ import time
 from typing import Any
 
 import requests
-from flask import current_app
+from flask import Flask
 from requests.exceptions import RequestException
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.constants import MAIN_PRODUCTS_URL, NON_MAIN_PRODUCTS_URL
 from app.db import db
-from app.models import Product
+from app.models import Category, Product
 
 
 def count_products() -> int:
@@ -28,41 +28,53 @@ def get_products_info() -> list[Product]:
     return result
 
 
-def fetch_products_data() -> dict[str, Any]:
-    """Fetch data from source URLs and return total results."""
-    main_page_response = requests.get(MAIN_PRODUCTS_URL).json()
-    non_main_page_response = requests.get(NON_MAIN_PRODUCTS_URL).json()
-    return main_page_response + non_main_page_response
-
-
-def parse_products_data(data: dict[str, Any]) -> dict[str, Any]:
-    categories = data["categories"]
-    product_marks = data["product_marks"]
-    products = data["products"]
+def merge_api_responses(
+    main_response: dict[str, Any],
+    non_main_response: dict[str, Any],
+) -> dict[str, Any]:
+    products = main_response["products"] + non_main_response["products"]
     return {
-        "categories": categories,
-        "product_marks": product_marks,
+        "categories": main_response["categories"],
+        "product_marks": main_response["product_marks"],
         "products": products,
     }
 
 
-def save_products_data(objects: dict[str, Any]) -> None:
-    pass
+def fetch_products_data() -> dict[str, Any]:
+    """Fetch data from source URLs and return total results."""
+    main_page_response = requests.get(MAIN_PRODUCTS_URL).json()
+    non_main_page_response = requests.get(NON_MAIN_PRODUCTS_URL).json()
+    return merge_api_responses(main_page_response, non_main_page_response)
 
 
-def load_fetched_data_to_db() -> None:
+def save_categories(categories: dict[str, Any]) -> None:
+    for category in categories:
+        category_id = category["Category_ID"]
+        existing = db.session.get(Category, category_id)
+
+        if not existing:
+            new_category = Category(
+                id=category_id,
+                name=category["Category_Name"],
+                image=category["Category_Image"],
+                sort_order=category["sort_order"],
+            )
+            db.session.add(new_category)
+    db.session.commit()
+
+
+def load_fetched_data_to_db(app: Flask) -> None:
     """Load all fetched data to DB. Work as a background task."""
     while True:
-        with current_app.app_context():
+        with app.app_context():
             try:
                 data = fetch_products_data()
-                objects_to_save = parse_products_data(data)
-                save_products_data(objects_to_save)
-                current_app.logger.info("Данные обновлены")
+                save_categories(data["categories"])
+                app.logger.info("Данные обновлены")
             except RequestException as e:
-                current_app.logger.error(f"Ошибка запроса к API: {e}")
+                app.logger.error(f"Ошибка запроса к API: {e}")
             except SQLAlchemyError as e:
-                current_app.logger.error(f"Ошибка базы данных: {e}")
+                app.logger.error(f"Ошибка базы данных: {e}")
             except (ValueError, TypeError, KeyError) as e:
-                current_app.logger.error(f"Ошибка обработки данных: {e}")
-        time.sleep(current_app.config["FETCH_INTERVAL"])
+                app.logger.error(f"Ошибка обработки данных: {e}")
+        time.sleep(app.config["FETCH_INTERVAL"])
