@@ -8,7 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.constants import MAIN_PRODUCTS_URL, NON_MAIN_PRODUCTS_URL
 from app.db import db
-from app.models import Category, Product
+from app.models import Category, Product, ProductMark
 
 
 def count_products() -> int:
@@ -51,7 +51,6 @@ def save_categories(categories: dict[str, Any]) -> None:
     for category in categories:
         category_id = category["Category_ID"]
         existing = db.session.get(Category, category_id)
-
         if not existing:
             new_category = Category(
                 id=category_id,
@@ -63,6 +62,18 @@ def save_categories(categories: dict[str, Any]) -> None:
     db.session.commit()
 
 
+def save_product_marks(product_marks: dict[str, Any]) -> None:
+    for mark in product_marks:
+        mark_id = mark["Mark_ID"]
+        existing = db.session.get(ProductMark, mark_id)
+        if not existing:
+            new_product_mark = ProductMark(
+                id=mark["Mark_ID"], name=mark["Mark_Name"]
+            )
+            db.session.add(new_product_mark)
+    db.session.commit()
+
+
 def load_fetched_data_to_db(app: Flask) -> None:
     """Load all fetched data to DB. Work as a background task."""
     while True:
@@ -70,7 +81,9 @@ def load_fetched_data_to_db(app: Flask) -> None:
             try:
                 data = fetch_products_data()
                 save_categories(data["categories"])
-                app.logger.info("Данные обновлены")
+                app.logger.info("Категории обновлены")
+                save_product_marks(data["product_marks"])
+                app.logger.info("Отметки на продуктах обновлены")
             except RequestException as e:
                 app.logger.error(f"Ошибка запроса к API: {e}")
             except SQLAlchemyError as e:
