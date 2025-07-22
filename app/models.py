@@ -65,9 +65,9 @@ class Parameter(db.Model):
     disabled: Mapped[bool | None] = mapped_column(Boolean, default=False)
     extra_field_color: Mapped[str | None]
     extra_field_image: Mapped[str | None]
-    name: Mapped[str]
+    name: Mapped[str | None]
     old_price: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
-    parameter_string: Mapped[str]
+    parameter_string: Mapped[str | None]
     price: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
     sort_order: Mapped[int | None] = mapped_column(default=0)
     product_id: Mapped[int | None] = mapped_column(ForeignKey("products.id"))
