@@ -10,23 +10,18 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.constants import MAIN_PRODUCTS_URL, NON_MAIN_PRODUCTS_URL
 from app.db import db
 from app.models import Category, Image, Parameter, Product, ProductMark
+from app.schemas import ProductSchema
 
 
 def count_products() -> int:
     return db.session.scalar(db.select(db.func.count(Product.id)))
 
 
-def get_products_info() -> list[Product]:
+def get_products_info() -> list[dict[str, Any]]:
     products = db.session.execute(db.select(Product)).scalars().all()
-    result = []
-    for product in products:
-        result.append({
-            "name": product.name,
-            "images": product.images,
-            "parameters": product.parameters,
-            "categories": [c.name for c in product.categories],
-        })
-    return result
+    return [
+        ProductSchema.from_orm(product).dict() for product in products
+    ]
 
 
 def merge_api_responses(
